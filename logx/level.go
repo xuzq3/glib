@@ -9,32 +9,34 @@ const (
 	WARN
 	ERROR
 	FATAL
+	NONE
 )
 
 const DefaultLevel = TRACE
 
-var stringLevels = map[string]Level{
-	"TRACE": TRACE,
-	"DEBUG": DEBUG,
-	"INFO":  INFO,
-	"WARN":  WARN,
-	"ERROR": ERROR,
-	"FATAL": FATAL,
-}
+// var stringLevels = map[string]Level{
+// 	"TRACE": TRACE,
+// 	"DEBUG": DEBUG,
+// 	"INFO":  INFO,
+// 	"WARN":  WARN,
+// 	"ERROR": ERROR,
+// 	"FATAL": FATAL,
+// }
 
 var levelStrings = map[Level]string{
 	TRACE: "TRACE",
 	DEBUG: "DEBUG",
-	INFO:  "INFO",
-	WARN:  "WARN",
+	INFO:  "INFO ",
+	WARN:  "WARN ",
 	ERROR: "ERROR",
 	FATAL: "FATAL",
+	NONE:  "NONE ",
 }
 
 func (level Level) String() string {
 	str, ok := levelStrings[level]
 	if !ok {
-		return "UNKNOWN"
+		return "NONE "
 	}
 	return str
 }

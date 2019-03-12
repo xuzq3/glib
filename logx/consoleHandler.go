@@ -2,7 +2,6 @@ package logx
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -13,7 +12,7 @@ import (
 type consoleHandler struct {
 	level     Level
 	fmt       *formatter
-	out       io.Writer
+	out       *os.File
 	lock      *sync.Mutex
 	callDepth int
 }
@@ -50,6 +49,14 @@ func (h *consoleHandler) SetTimeFormat(timeFormat string) {
 
 func (h *consoleHandler) GetTimeFormat() string {
 	return h.fmt.getTimeFormat()
+}
+
+func (h *consoleHandler) SetCallDepth(depth int) {
+	h.callDepth = depth
+}
+
+func (h *consoleHandler) GetCallDepth() int {
+	return h.callDepth
 }
 
 func (h *consoleHandler) write(level Level, v ...interface{}) {

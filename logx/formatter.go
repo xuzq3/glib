@@ -2,6 +2,7 @@ package logx
 
 import (
 	"bytes"
+	"runtime"
 	"strconv"
 	"time"
 )
@@ -9,6 +10,13 @@ import (
 type formatter struct {
 	colored    bool
 	timeFormat string
+}
+
+func newFormater() *formatter {
+	return &formatter{
+		colored:    defaultColored,
+		timeFormat: defaultTimeFormat,
+	}
 }
 
 func (f *formatter) setColored(colored bool) {
@@ -61,8 +69,14 @@ func (f *formatter) format(t time.Time, lv Level, file string, line int, msg str
 	return buf
 }
 
+var defaultColored bool = func() bool {
+	if runtime.GOOS == "windows" {
+		return false
+	} else {
+		return true
+	}
+}()
+
 var defaultTimeFormat string = "2006-01-02 15:04:05"
-var defaultFormatter *formatter = &formatter{
-	colored:    true,
-	timeFormat: defaultTimeFormat,
-}
+
+var defaultFormatter *formatter = newFormater()
