@@ -54,7 +54,7 @@ func NewSizeRotateFileHandler(dir string, fname string, maxFileCnt int, maxFileS
 		logfname:    fname,
 		out:         f,
 		lock:        new(sync.Mutex),
-		callDepth:   4,
+		callDepth:   defaultCallDepth,
 		maxFileCnt:  maxFileCnt,
 		maxFileSize: maxFileSize,
 		curFileSize: curFileSize,

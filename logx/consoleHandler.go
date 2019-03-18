@@ -23,7 +23,7 @@ func NewConsoleHandler() *consoleHandler {
 		fmt:       defaultFormatter,
 		out:       os.Stdout,
 		lock:      new(sync.Mutex),
-		callDepth: 4,
+		callDepth: defaultCallDepth,
 	}
 }
 
@@ -64,7 +64,7 @@ func (h *consoleHandler) write(level Level, v ...interface{}) {
 		return
 	}
 	msg := fmt.Sprint(v...)
-	h.output(h.callDepth, level, msg)
+	h.output(h.callDepth+1, level, msg)
 }
 
 func (h *consoleHandler) writef(level Level, format string, v ...interface{}) {
@@ -72,7 +72,7 @@ func (h *consoleHandler) writef(level Level, format string, v ...interface{}) {
 		return
 	}
 	msg := fmt.Sprintf(format, v...)
-	h.output(h.callDepth, level, msg)
+	h.output(h.callDepth+1, level, msg)
 }
 
 func (h *consoleHandler) output(callDepth int, level Level, msg string) {

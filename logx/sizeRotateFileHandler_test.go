@@ -11,7 +11,7 @@ func TestSizeRotateFileHandler(t *testing.T) {
 		t.Log("NewSizeRotateFileHandler error: ", err.Error())
 		return
 	}
-	fh.SetCallDepth(3)
+	fh.SetCallDepth(2)
 	fh.SetLevel(logx.DEBUG)
 	for i := 0; i < 1000; i++ {
 		fh.Trace("Trace")

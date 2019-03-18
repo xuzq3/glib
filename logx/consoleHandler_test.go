@@ -7,7 +7,7 @@ import (
 
 func TestConsoleHandler(t *testing.T) {
 	ch := logx.NewConsoleHandler()
-	ch.SetCallDepth(3)
+	ch.SetCallDepth(2)
 	ch.SetLevel(logx.DEBUG)
 	ch.Trace("Trace")
 	ch.Debug("Debug")

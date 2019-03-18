@@ -29,7 +29,7 @@ func NewFileHandler(file string) (*fileHandler, error) {
 		logfile:   file,
 		out:       f,
 		lock:      new(sync.Mutex),
-		callDepth: 4,
+		callDepth: defaultCallDepth,
 	}
 	return fh, nil
 }

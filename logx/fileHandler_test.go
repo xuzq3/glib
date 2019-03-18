@@ -11,7 +11,7 @@ func TestFileHandler(t *testing.T) {
 		t.Log("NewFileHandler error: ", err.Error())
 		return
 	}
-	fh.SetCallDepth(3)
+	fh.SetCallDepth(2)
 	fh.SetLevel(logx.DEBUG)
 	fh.Trace("Trace")
 	fh.Tracef("%s", "Tracef")

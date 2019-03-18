@@ -54,7 +54,7 @@ func NewDateRotateFileHandler(dir string, fname string, maxFileCnt int) (*dateRo
 		logfname:   fname,
 		out:        f,
 		lock:       new(sync.Mutex),
-		callDepth:  4,
+		callDepth:  defaultCallDepth,
 		time:       mtime,
 		maxFileCnt: maxFileCnt,
 	}

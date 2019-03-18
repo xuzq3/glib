@@ -1,59 +1,59 @@
 package logx
 
-var DefaultLogger *Logger = NewLogger()
+var defaultLogger *loggerBase = newLoggerBase()
 
 func AddHandler(h Handler) {
-	DefaultLogger.AddHandler(h)
+	defaultLogger.AddHandler(h)
 }
 
 func SetLevel(level Level) {
-	DefaultLogger.SetLevel(level)
+	defaultLogger.SetLevel(level)
 }
 
 func Trace(v ...interface{}) {
-	DefaultLogger.Trace(v...)
+	defaultLogger.Trace(v...)
 }
 
 func Tracef(format string, v ...interface{}) {
-	DefaultLogger.Tracef(format, v...)
+	defaultLogger.Tracef(format, v...)
 }
 
 func Debug(v ...interface{}) {
-	DefaultLogger.Debug(v...)
+	defaultLogger.Debug(v...)
 }
 
 func Debugf(format string, v ...interface{}) {
-	DefaultLogger.Debugf(format, v...)
+	defaultLogger.Debugf(format, v...)
 }
 
 func Info(v ...interface{}) {
-	DefaultLogger.Info(v...)
+	defaultLogger.Info(v...)
 }
 
 func Infof(format string, v ...interface{}) {
-	DefaultLogger.Infof(format, v...)
+	defaultLogger.Infof(format, v...)
 }
 
 func Warn(v ...interface{}) {
-	DefaultLogger.Warn(v...)
+	defaultLogger.Warn(v...)
 }
 
 func Warnf(format string, v ...interface{}) {
-	DefaultLogger.Warnf(format, v...)
+	defaultLogger.Warnf(format, v...)
 }
 
 func Error(v ...interface{}) {
-	DefaultLogger.Error(v...)
+	defaultLogger.Error(v...)
 }
 
 func Errorf(format string, v ...interface{}) {
-	DefaultLogger.Errorf(format, v...)
+	defaultLogger.Errorf(format, v...)
 }
 
 func Fatal(v ...interface{}) {
-	DefaultLogger.Fatal(v...)
+	defaultLogger.Fatal(v...)
 }
 
 func Fatalf(format string, v ...interface{}) {
-	DefaultLogger.Fatalf(format, v...)
+	defaultLogger.Fatalf(format, v...)
 }

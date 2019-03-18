@@ -77,6 +77,9 @@ var defaultColored bool = func() bool {
 	}
 }()
 
-var defaultTimeFormat string = "2006-01-02 15:04:05"
+var (
+	defaultTimeFormat string = "2006-01-02 15:04:05"
+	defaultCallDepth  int    = 4
+)
 
 var defaultFormatter *formatter = newFormater()
