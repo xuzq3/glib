@@ -147,9 +147,9 @@ func DecompressTargz(srcpath string, destpath string) error {
 
 		path := filepath.Join(destpath, hdr.Name)
 		if hdr.FileInfo().IsDir() {
-			err = decompressTargzDir(path, tr)
+			err = decompressTargzDir(path, hdr, tr)
 		} else {
-			err = decompressTargzFile(path, tr)
+			err = decompressTargzFile(path, hdr, tr)
 		}
 
 		if err != nil {
@@ -160,22 +160,22 @@ func DecompressTargz(srcpath string, destpath string) error {
 	return nil
 }
 
-func decompressTargzDir(path string, tr *tar.Reader) error {
-	err := os.MkdirAll(path, 0755)
+func decompressTargzDir(path string, hdr *tar.Header, tr *tar.Reader) error {
+	err := os.MkdirAll(path, os.FileMode(hdr.Mode))
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func decompressTargzFile(path string, tr *tar.Reader) error {
+func decompressTargzFile(path string, hdr *tar.Header, tr *tar.Reader) error {
 	dir := filepath.Dir(path)
 	err := os.MkdirAll(dir, 0755)
 	if err != nil {
 		return err
 	}
 
-	w, err := os.Create(path)
+	w, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.FileMode(hdr.Mode))
 	if err != nil {
 		return err
 	}

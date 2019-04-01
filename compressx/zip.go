@@ -142,7 +142,7 @@ func DecompressZip(srcpath string, destpath string) error {
 }
 
 func decompressZipDir(path string, file *zip.File) error {
-	err := os.MkdirAll(path, 0755)
+	err := os.MkdirAll(path, file.Mode())
 	if err != nil {
 		return err
 	}
@@ -162,7 +162,7 @@ func decompressZipFile(path string, file *zip.File) error {
 	}
 	defer r.Close()
 
-	w, err := os.Create(path)
+	w, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, file.Mode())
 	if err != nil {
 		return err
 	}
