@@ -1,10 +1,10 @@
-package logger
+package logx
 
 import "testing"
 
 func TestFacade(t *testing.T) {
 	cfg := Config{
-		Level: InfoLevel,
+		Level:      InfoLevel,
 		JsonFormat: true,
 	}
 	err := Init(cfg)

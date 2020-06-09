@@ -1,4 +1,4 @@
-package logger
+package logx
 
 import (
 	"os"
@@ -12,13 +12,19 @@ func TestLogrusLogger(t *testing.T) {
 		"a": "b",
 		"c": "d",
 	}).Infof("hello %s", "world")
+
+	logger2 := NewLogrusLogger(NewOption().SetTextFormat().AddOutput(os.Stdout))
+	logger2.Info("hello")
+	logger2.WithFields(Fields{
+		"a": "b",
+		"c": "d",
+	}).Infof("hello %s", "world")
 }
 
 func BenchmarkLogrusLogger(b *testing.B) {
 	logger := NewLogrusLogger(NewOption().SetJsonFormat().AddOutput(os.Stdout))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		//logger.Info("hello world")
 		logger.WithFields(Fields{
 			"a": "b",
 			"c": "d",

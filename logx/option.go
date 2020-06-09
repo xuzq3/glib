@@ -1,7 +1,15 @@
-package logger
+package logx
 
 import (
 	"io"
+)
+
+const (
+	levelKey  = "level"
+	timeKey   = "time"
+	callerKey = "caller"
+	msgKey    = "msg"
+	dataKey   = "data"
 )
 
 type Option struct {

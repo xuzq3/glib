@@ -1,4 +1,4 @@
-package logger
+package logx
 
 import (
 	"fmt"
@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/xuzq3/glib/logger/file"
+	"github.com/xuzq3/glib/logx/file"
 )
 
 const (
@@ -31,7 +31,6 @@ type Config struct {
 	Level          string
 	DisableConsole bool
 	JsonFormat     bool
-	CallerSkip     int
 	File           FileConfig
 }
 
@@ -39,7 +38,7 @@ var _facade *loggerFacade
 
 func Init(config Config) error {
 	opt := NewOption()
-	opt.AddCallerSkip(config.CallerSkip + 1)
+	opt.AddCallerSkip(1)
 	opt.SetLevel(config.Level)
 	if !config.DisableConsole {
 		opt.AddOutput(os.Stdout)
@@ -94,8 +93,8 @@ func Init(config Config) error {
 	}
 
 	_facade = &loggerFacade{
-		//logger: NewZapLogger(opt),
-		logger: NewLogrusLogger(opt),
+		logger: NewZapLogger(opt),
+		//logger: NewLogrusLogger(opt),
 	}
 	return nil
 }

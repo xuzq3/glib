@@ -1,4 +1,4 @@
-package logger
+package logx
 
 type LoggerType int
 
@@ -7,7 +7,8 @@ const (
 	Zap
 )
 
-type LoggerFactory struct{}
+type LoggerFactory struct {
+}
 
 func NewLoggerFactory() *LoggerFactory {
 	return &LoggerFactory{}

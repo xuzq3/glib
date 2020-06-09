@@ -1,4 +1,4 @@
-package logger
+package logx
 
 import (
 	"fmt"
@@ -67,9 +67,9 @@ func (l *LogrusLogger) initLogger() {
 		//})
 	} else {
 		logger.SetFormatter(&logrus.TextFormatter{
-			TimestampFormat:  "2006-01-02T15:04:05.000",
-			CallerPrettyfier: logrusCallerPrettyfier,
-			DisableSorting:   true,
+			TimestampFormat: "2006-01-02T15:04:05.000",
+			//CallerPrettyfier: logrusCallerPrettyfier,
+			DisableSorting: true,
 		})
 	}
 	l.logger = logger
@@ -83,18 +83,7 @@ func logrusCallerPrettyfier(frame *runtime.Frame) (string, string) {
 			funcVal = filepath.Base(frame.Function)
 		}
 		if frame.File != "" {
-			path := func() string {
-				idx := strings.LastIndexByte(frame.File, '/')
-				if idx == -1 {
-					return frame.File
-				}
-				idx2 := strings.LastIndexByte(frame.File[:idx], '/')
-				if idx2 == -1 {
-					return frame.File[idx+1:]
-				}
-				return frame.File[idx2+1:]
-			}()
-			fileVal = fmt.Sprintf("%s:%d", path, frame.Line)
+			fileVal = fmt.Sprintf("%s:%d", filepath.Base(frame.File), frame.Line)
 		}
 	}
 	return funcVal, fileVal

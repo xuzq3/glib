@@ -1,4 +1,4 @@
-package logger
+package logx
 
 import (
 	"fmt"
@@ -65,7 +65,6 @@ func (l *ZapLogger) initLogger() {
 	options := []zap.Option{
 		zap.AddCaller(),
 		zap.AddCallerSkip(zapCallerDepth + l.opt.callerSkip),
-		//zap.Hooks(),
 	}
 	logger := zap.New(combinedCore, options...).Sugar()
 	l.logger = logger
@@ -73,11 +72,11 @@ func (l *ZapLogger) initLogger() {
 
 func (l *ZapLogger) getEncoderConfig() zapcore.EncoderConfig {
 	encoderConfig := zapcore.EncoderConfig{
-		MessageKey:     "msg",
-		LevelKey:       "level",
-		TimeKey:        "time",
+		MessageKey:     msgKey,
+		LevelKey:       levelKey,
+		TimeKey:        timeKey,
 		NameKey:        "logger",
-		CallerKey:      "caller",
+		CallerKey:      callerKey,
 		StacktraceKey:  "stacktrace",
 		LineEnding:     zapcore.DefaultLineEnding,
 		EncodeLevel:    zapcore.LowercaseLevelEncoder,
