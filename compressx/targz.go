@@ -3,15 +3,36 @@ package compressx
 import (
 	"archive/tar"
 	"compress/gzip"
+	"context"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/xuzq3/glib/iox"
 )
 
-func CompressTargz(srcPath string, destPath string) error {
-	srcPath = filepath.Clean(srcPath)
+type TargzCompresser struct {
+	ctx      context.Context
+	srcPath  string
+	destPath string
+	opts     *Options
+}
 
-	fw, err := os.Create(destPath)
+func NewTargzCompresser(ctx context.Context, srcPath string, destPath string, opts *Options) *TargzCompresser {
+	if opts == nil {
+		opts = NewOptions()
+	}
+	return &TargzCompresser{
+		ctx:      ctx,
+		srcPath:  srcPath,
+		destPath: destPath,
+		opts:     opts,
+	}
+}
+
+func (c *TargzCompresser) Compress() error {
+	srcPath := filepath.Clean(c.srcPath)
+	fw, err := os.Create(c.destPath)
 	if err != nil {
 		return err
 	}
@@ -22,12 +43,6 @@ func CompressTargz(srcPath string, destPath string) error {
 
 	tw := tar.NewWriter(gw)
 	defer tw.Close()
-	// defer func() {
-	// 	errf := tw.Close()
-	// 	if err == nil && errf != nil {
-	// 		err = errf
-	// 	}
-	// }()
 
 	fi, err := os.Stat(srcPath)
 	if err != nil {
@@ -36,9 +51,9 @@ func CompressTargz(srcPath string, destPath string) error {
 
 	_, srcRelative := filepath.Split(srcPath)
 	if fi.IsDir() {
-		err = compressTargzDir(srcPath, srcRelative, tw)
+		err = c.compressDir(srcPath, srcRelative, tw)
 	} else {
-		err = compressTargzFile(srcPath, srcRelative, tw, fi)
+		err = c.compressFile(srcPath, srcRelative, tw, fi)
 	}
 	if err != nil {
 		return err
@@ -47,7 +62,12 @@ func CompressTargz(srcPath string, destPath string) error {
 	return nil
 }
 
-func compressTargzDir(srcPath string, srcRelative string, tw *tar.Writer) error {
+func (c *TargzCompresser) compressDir(srcPath string, srcRelative string, tw *tar.Writer) error {
+	err := checkDone(c.ctx)
+	if err != nil {
+		return err
+	}
+
 	dir, err := os.Open(srcPath)
 	if err != nil {
 		return err
@@ -63,12 +83,12 @@ func compressTargzDir(srcPath string, srcRelative string, tw *tar.Writer) error 
 		curRelative := filepath.Join(srcRelative, fi.Name())
 
 		if fi.IsDir() {
-			err = compressTargzDir(curPath, curRelative, tw)
+			err = c.compressDir(curPath, curRelative, tw)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = compressTargzFile(curPath, curRelative, tw, fi)
+			err = c.compressFile(curPath, curRelative, tw, fi)
 			if err != nil {
 				return err
 			}
@@ -78,7 +98,12 @@ func compressTargzDir(srcPath string, srcRelative string, tw *tar.Writer) error 
 	return nil
 }
 
-func compressTargzFile(srcPath string, srcRelative string, tw *tar.Writer, fi os.FileInfo) error {
+func (c *TargzCompresser) compressFile(srcPath string, srcRelative string, tw *tar.Writer, fi os.FileInfo) error {
+	err := checkDone(c.ctx)
+	if err != nil {
+		return err
+	}
+
 	hdr, err := tar.FileInfoHeader(fi, "")
 	if err != nil {
 		return err
@@ -96,33 +121,38 @@ func compressTargzFile(srcPath string, srcRelative string, tw *tar.Writer, fi os
 	}
 	defer fr.Close()
 
-	_, err = io.Copy(tw, fr)
+	copier := iox.NewCopier(c.ctx)
+	copier.SetBlockSize(c.opts.BlockSize)
+	copier.SetSleepTime(c.opts.SleepTime)
+	_, err = copier.Copy(tw, fr)
 	if err != nil {
 		return err
 	}
 
-	// oneSize := 1024 * 1024
-	// buf := make([]byte, oneSize)
-	// for {
-	// 	n, err := fr.Read(buf)
-	// 	if err != nil {
-	// 		if io.EOF == err {
-	// 			break
-	// 		} else {
-	// 			return err
-	// 		}
-	// 	}
-	// 	_, err = tw.Write(buf[0:n])
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-
 	return nil
 }
 
-func DecompressTargz(srcpath string, destpath string) error {
-	fr, err := os.Open(srcpath)
+type TargzDecompresser struct {
+	ctx      context.Context
+	srcPath  string
+	destPath string
+	opts     *Options
+}
+
+func NewTargzDecompresser(ctx context.Context, srcPath string, destPath string, opts *Options) *TargzDecompresser {
+	if opts == nil {
+		opts = NewOptions()
+	}
+	return &TargzDecompresser{
+		ctx:      ctx,
+		srcPath:  srcPath,
+		destPath: destPath,
+		opts:     opts,
+	}
+}
+
+func (d *TargzDecompresser) Decompress() error {
+	fr, err := os.Open(d.srcPath)
 	if err != nil {
 		return err
 	}
@@ -145,11 +175,11 @@ func DecompressTargz(srcpath string, destpath string) error {
 			}
 		}
 
-		path := filepath.Join(destpath, hdr.Name)
+		path := filepath.Join(d.destPath, hdr.Name)
 		if hdr.FileInfo().IsDir() {
-			err = decompressTargzDir(path, hdr, tr)
+			err = d.decompressDir(path, hdr, tr)
 		} else {
-			err = decompressTargzFile(path, hdr, tr)
+			err = d.decompressFile(path, hdr, tr)
 		}
 
 		if err != nil {
@@ -160,17 +190,27 @@ func DecompressTargz(srcpath string, destpath string) error {
 	return nil
 }
 
-func decompressTargzDir(path string, hdr *tar.Header, tr *tar.Reader) error {
-	err := os.MkdirAll(path, os.FileMode(hdr.Mode))
+func (d *TargzDecompresser) decompressDir(path string, hdr *tar.Header, tr *tar.Reader) error {
+	err := checkDone(d.ctx)
+	if err != nil {
+		return err
+	}
+
+	err = os.MkdirAll(path, os.FileMode(hdr.Mode))
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func decompressTargzFile(path string, hdr *tar.Header, tr *tar.Reader) error {
+func (d *TargzDecompresser) decompressFile(path string, hdr *tar.Header, tr *tar.Reader) error {
+	err := checkDone(d.ctx)
+	if err != nil {
+		return err
+	}
+
 	dir := filepath.Dir(path)
-	err := os.MkdirAll(dir, 0755)
+	err = os.MkdirAll(dir, 0755)
 	if err != nil {
 		return err
 	}
@@ -181,7 +221,10 @@ func decompressTargzFile(path string, hdr *tar.Header, tr *tar.Reader) error {
 	}
 	defer w.Close()
 
-	_, err = io.Copy(w, tr)
+	copier := iox.NewCopier(d.ctx)
+	copier.SetBlockSize(d.opts.BlockSize)
+	copier.SetSleepTime(d.opts.SleepTime)
+	_, err = copier.Copy(w, tr)
 	if err != nil {
 		return err
 	}

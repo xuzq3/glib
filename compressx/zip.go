@@ -2,15 +2,35 @@ package compressx
 
 import (
 	"archive/zip"
-	"io"
+	"context"
 	"os"
 	"path/filepath"
+
+	"github.com/xuzq3/glib/iox"
 )
 
-func CompressZip(srcPath string, destPath string) error {
-	srcPath = filepath.Clean(srcPath)
+type ZipCompresser struct {
+	ctx      context.Context
+	srcPath  string
+	destPath string
+	opts     *Options
+}
 
-	dw, err := os.Create(destPath)
+func NewZipCompresser(ctx context.Context, srcPath string, destPath string, opts *Options) *ZipCompresser {
+	if opts == nil {
+		opts = NewOptions()
+	}
+	return &ZipCompresser{
+		ctx:      ctx,
+		srcPath:  srcPath,
+		destPath: destPath,
+		opts:     opts,
+	}
+}
+
+func (c *ZipCompresser) Compress() error {
+	srcPath := filepath.Clean(c.srcPath)
+	dw, err := os.Create(c.destPath)
 	if err != nil {
 		return err
 	}
@@ -18,12 +38,6 @@ func CompressZip(srcPath string, destPath string) error {
 
 	zw := zip.NewWriter(dw)
 	defer zw.Close()
-	// defer func() {
-	// 	errf := zw.Close()
-	// 	if err == nil && errf != nil {
-	// 		err = errf
-	// 	}
-	// }()
 
 	fi, err := os.Stat(srcPath)
 	if err != nil {
@@ -32,126 +46,145 @@ func CompressZip(srcPath string, destPath string) error {
 
 	_, srcRelative := filepath.Split(srcPath)
 	if fi.IsDir() {
-		err = compressZipDir(srcPath, srcRelative, zw)
+		err = c.compressDir(srcPath, srcRelative, zw)
 	} else {
-		err = compressZipFile(srcPath, srcRelative, zw, fi)
+		err = c.compressFile(srcPath, srcRelative, zw, fi)
 	}
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
-func compressZipDir(srcPath string, srcRelative string, zw *zip.Writer) error {
+func (c *ZipCompresser) compressDir(srcPath string, srcRelative string, zw *zip.Writer) error {
+	err := checkDone(c.ctx)
+	if err != nil {
+		return err
+	}
+
 	dir, err := os.Open(srcPath)
 	if err != nil {
 		return err
 	}
 	defer dir.Close()
-
 	fis, err := dir.Readdir(0)
 	if err != nil {
 		return err
 	}
+
 	for _, fi := range fis {
 		curPath := filepath.Join(srcPath, fi.Name())
 		curRelative := filepath.Join(srcRelative, fi.Name())
-
 		if fi.IsDir() {
-			err = compressZipDir(curPath, curRelative, zw)
+			err = c.compressDir(curPath, curRelative, zw)
 			if err != nil {
 				return err
 			}
 		} else {
-			err = compressZipFile(curPath, curRelative, zw, fi)
+			err = c.compressFile(curPath, curRelative, zw, fi)
 			if err != nil {
 				return err
 			}
 		}
-
 	}
 	return nil
 }
 
-func compressZipFile(srcPath string, srcRelative string, zw *zip.Writer, fi os.FileInfo) error {
-	hdr, err := zip.FileInfoHeader(fi)
+func (c *ZipCompresser) compressFile(srcPath string, srcRelative string, zw *zip.Writer, fi os.FileInfo) error {
+	err := checkDone(c.ctx)
 	if err != nil {
 		return err
 	}
 
+	hdr, err := zip.FileInfoHeader(fi)
+	if err != nil {
+		return err
+	}
 	hdr.Name = filepath.ToSlash(srcRelative)
 	hdr.Method = zip.Deflate
 	w, err := zw.CreateHeader(hdr)
 	if err != nil {
 		return err
 	}
-
-	fr, err := os.Open(srcPath)
+	r, err := os.Open(srcPath)
 	if err != nil {
 		return err
 	}
-	defer fr.Close()
+	defer r.Close()
 
-	_, err = io.Copy(w, fr)
+	copier := iox.NewCopier(c.ctx)
+	copier.SetBlockSize(c.opts.BlockSize)
+	copier.SetSleepTime(c.opts.SleepTime)
+	_, err = copier.Copy(w, r)
 	if err != nil {
 		return err
 	}
-
-	// oneSize := 1024 * 1024
-	// buf := make([]byte, oneSize)
-	// for {
-	// 	n, err := fr.Read(buf)
-	// 	if err != nil {
-	// 		if io.EOF == err {
-	// 			break
-	// 		} else {
-	// 			return err
-	// 		}
-	// 	}
-	// 	_, err = w.Write(buf[0:n])
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
 
 	return nil
 }
 
-func DecompressZip(srcpath string, destpath string) error {
-	reader, err := zip.OpenReader(srcpath)
+type ZipDecompresser struct {
+	ctx      context.Context
+	srcPath  string
+	destPath string
+	opts     *Options
+}
+
+func NewZipDecompresser(ctx context.Context, srcPath string, destPath string, opts *Options) *ZipDecompresser {
+	if opts == nil {
+		opts = NewOptions()
+	}
+	return &ZipDecompresser{
+		ctx:      ctx,
+		srcPath:  srcPath,
+		destPath: destPath,
+		opts:     opts,
+	}
+}
+
+func (d *ZipDecompresser) Decompress() error {
+	reader, err := zip.OpenReader(d.srcPath)
 	if err != nil {
 		return err
 	}
 	defer reader.Close()
 
 	for _, file := range reader.File {
-		path := filepath.Join(destpath, file.Name)
+		path := filepath.Join(d.destPath, file.Name)
 		if file.FileInfo().IsDir() {
-			err = decompressZipDir(path, file)
+			err = d.decompressDir(path, file)
 		} else {
-			err = decompressZipFile(path, file)
+			err = d.decompressFile(path, file)
 		}
 
 		if err != nil {
 			return err
 		}
 	}
-
 	return nil
 }
 
-func decompressZipDir(path string, file *zip.File) error {
-	err := os.MkdirAll(path, file.Mode())
+func (d *ZipDecompresser) decompressDir(path string, file *zip.File) error {
+	err := checkDone(d.ctx)
+	if err != nil {
+		return err
+	}
+
+	err = os.MkdirAll(path, file.Mode())
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func decompressZipFile(path string, file *zip.File) error {
+func (d *ZipDecompresser) decompressFile(path string, file *zip.File) error {
+	err := checkDone(d.ctx)
+	if err != nil {
+		return err
+	}
+
 	dir := filepath.Dir(path)
-	err := os.MkdirAll(dir, 0755)
+	err = os.MkdirAll(dir, 0755)
 	if err != nil {
 		return err
 	}
@@ -168,9 +201,13 @@ func decompressZipFile(path string, file *zip.File) error {
 	}
 	defer w.Close()
 
-	_, err = io.Copy(w, r)
+	copier := iox.NewCopier(d.ctx)
+	copier.SetBlockSize(d.opts.BlockSize)
+	copier.SetSleepTime(d.opts.SleepTime)
+	_, err = copier.Copy(w, r)
 	if err != nil {
 		return err
 	}
+
 	return nil
 }
