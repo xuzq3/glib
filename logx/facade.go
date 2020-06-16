@@ -36,6 +36,10 @@ type Config struct {
 
 var _facade *loggerFacade
 
+func init() {
+	_ = Init(Config{})
+}
+
 func Init(config Config) error {
 	opt := NewOption()
 	opt.AddCallerSkip(1)
