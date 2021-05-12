@@ -1,4 +1,4 @@
-package iox
+package util
 
 import (
 	"context"
@@ -11,14 +11,14 @@ const defaultBlockSize = 4 * 1024
 type Copier struct {
 	ctx       context.Context
 	blockSize int64
-	sleepTime time.Duration
+	delayTime time.Duration
 }
 
 func NewCopier(ctx context.Context) *Copier {
 	return &Copier{
 		ctx:       ctx,
 		blockSize: defaultBlockSize,
-		sleepTime: 0,
+		delayTime: 0,
 	}
 }
 
@@ -50,12 +50,12 @@ func (c *Copier) Copy(dst io.Writer, src io.Reader) (int64, error) {
 
 			written += int64(n)
 
-			if c.sleepTime > 0 {
+			if c.delayTime > 0 {
 			sleep:
 				select {
 				case <-c.ctx.Done():
 					return written, c.ctx.Err()
-				case <-time.After(c.sleepTime):
+				case <-time.After(c.delayTime):
 					break sleep
 				}
 			}
@@ -69,7 +69,7 @@ func (c *Copier) SetBlockSize(size int64) *Copier {
 	return c
 }
 
-func (c *Copier) SetSleepTime(d time.Duration) *Copier {
-	c.sleepTime = d
+func (c *Copier) SetDelayTime(d time.Duration) *Copier {
+	c.delayTime = d
 	return c
 }

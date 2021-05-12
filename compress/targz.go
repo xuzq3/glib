@@ -1,4 +1,4 @@
-package compressx
+package compress
 
 import (
 	"archive/tar"
@@ -8,7 +8,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/xuzq3/glib/iox"
+	"github.com/xuzq3/glib/util"
 )
 
 type TargzCompresser struct {
@@ -121,9 +121,9 @@ func (c *TargzCompresser) compressFile(srcPath string, srcRelative string, tw *t
 	}
 	defer fr.Close()
 
-	copier := iox.NewCopier(c.ctx)
+	copier := util.NewCopier(c.ctx)
 	copier.SetBlockSize(c.opts.BlockSize)
-	copier.SetSleepTime(c.opts.SleepTime)
+	copier.SetDelayTime(c.opts.DelayTime)
 	_, err = copier.Copy(tw, fr)
 	if err != nil {
 		return err
@@ -221,9 +221,9 @@ func (d *TargzDecompresser) decompressFile(path string, hdr *tar.Header, tr *tar
 	}
 	defer w.Close()
 
-	copier := iox.NewCopier(d.ctx)
+	copier := util.NewCopier(d.ctx)
 	copier.SetBlockSize(d.opts.BlockSize)
-	copier.SetSleepTime(d.opts.SleepTime)
+	copier.SetDelayTime(d.opts.DelayTime)
 	_, err = copier.Copy(w, tr)
 	if err != nil {
 		return err

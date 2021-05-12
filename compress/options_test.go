@@ -1,4 +1,4 @@
-package compressx
+package compress
 
 import (
 	"testing"
@@ -7,14 +7,14 @@ import (
 
 func TestOptions(t *testing.T) {
 	var blockSize int64 = 1024
-	var sleepTime time.Duration = time.Millisecond
+	var delayTime time.Duration = time.Millisecond
 
-	opts := NewOptions().SetBlockSize(1024).SetSleepTime(sleepTime)
+	opts := NewOptions().SetBlockSize(1024).SetDelayTime(delayTime)
 
 	if opts.BlockSize != blockSize {
 		t.Error("SetBlockSize failed")
 	}
-	if opts.SleepTime != sleepTime {
+	if opts.DelayTime != delayTime {
 		t.Error("SetSleepTime failed")
 	}
 }

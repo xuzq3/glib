@@ -1,4 +1,4 @@
-package compressx
+package compress
 
 import (
 	"archive/zip"
@@ -6,7 +6,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/xuzq3/glib/iox"
+	"github.com/xuzq3/glib/util"
 )
 
 type ZipCompresser struct {
@@ -112,9 +112,9 @@ func (c *ZipCompresser) compressFile(srcPath string, srcRelative string, zw *zip
 	}
 	defer r.Close()
 
-	copier := iox.NewCopier(c.ctx)
+	copier := util.NewCopier(c.ctx)
 	copier.SetBlockSize(c.opts.BlockSize)
-	copier.SetSleepTime(c.opts.SleepTime)
+	copier.SetDelayTime(c.opts.DelayTime)
 	_, err = copier.Copy(w, r)
 	if err != nil {
 		return err
@@ -201,9 +201,9 @@ func (d *ZipDecompresser) decompressFile(path string, file *zip.File) error {
 	}
 	defer w.Close()
 
-	copier := iox.NewCopier(d.ctx)
+	copier := util.NewCopier(d.ctx)
 	copier.SetBlockSize(d.opts.BlockSize)
-	copier.SetSleepTime(d.opts.SleepTime)
+	copier.SetDelayTime(d.opts.DelayTime)
 	_, err = copier.Copy(w, r)
 	if err != nil {
 		return err

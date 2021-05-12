@@ -1,10 +1,10 @@
 package file
 
 import (
+	"gopkg.in/natefinch/lumberjack.v2"
 	"os"
 	"sync"
 	"time"
-	"gopkg.in/natefinch/lumberjack.v2"
 )
 
 type MixRotateFile struct {

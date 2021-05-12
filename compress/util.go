@@ -1,4 +1,4 @@
-package compressx
+package compress
 
 import (
 	"context"
