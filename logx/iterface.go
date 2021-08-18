@@ -18,6 +18,7 @@ type ILogger interface {
 	Fatal(args ...interface{})
 	Fatalf(format string, args ...interface{})
 	WithFields(fields Fields) ILogger
+	WithField(key string, value interface{}) ILogger
 	WithError(err error) ILogger
 	Output() io.Writer
 }

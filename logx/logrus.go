@@ -144,6 +144,13 @@ func (l *LogrusLogger) WithFields(fields Fields) ILogger {
 	}
 }
 
+func (l *LogrusLogger) WithField(key string, value interface{}) ILogger {
+	return &logrusLogEntry{
+		logger: l,
+		entry:  l.logger.WithField(key, value),
+	}
+}
+
 func (l *LogrusLogger) WithError(err error) ILogger {
 	return &logrusLogEntry{
 		logger: l,
@@ -212,6 +219,13 @@ func (e *logrusLogEntry) WithFields(fields Fields) ILogger {
 	return &logrusLogEntry{
 		logger: e.logger,
 		entry:  e.entry.WithFields(convertToLogrusFields(fields)),
+	}
+}
+
+func (e *logrusLogEntry) WithField(key string, value interface{}) ILogger {
+	return &logrusLogEntry{
+		logger: e.logger,
+		entry:  e.entry.WithField(key, value),
 	}
 }
 

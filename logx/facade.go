@@ -87,12 +87,12 @@ func Init(config Config) error {
 			)
 			opt.AddOutput(f)
 		default:
-			return fmt.Errorf("unsupport file rotate type")
-			//f, err := os.OpenFile(config.File.Filename, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
-			//if err != nil {
-			//	return err
-			//}
-			//opt.AddOutput(f)
+			w, err := os.OpenFile(config.File.Filename, os.O_RDWR|os.O_APPEND|os.O_CREATE, 0666)
+			if err != nil {
+				return err
+			}
+			opt.AddOutput(w)
+			//return fmt.Errorf("unsupport file rotate type")
 		}
 	}
 
@@ -154,6 +154,12 @@ func Panicf(format string, args ...interface{}) {
 func WithFields(fields Fields) ILogger {
 	return &loggerFacade{
 		logger: _facade.logger.WithFields(fields),
+	}
+}
+
+func WithField(key string, value interface{}) ILogger {
+	return &loggerFacade{
+		logger: _facade.logger.WithField(key, value),
 	}
 }
 
@@ -241,6 +247,12 @@ func (l *loggerFacade) Panicf(format string, args ...interface{}) {
 func (l *loggerFacade) WithFields(fields Fields) ILogger {
 	return &loggerFacade{
 		logger: l.logger.WithFields(fields),
+	}
+}
+
+func (l *loggerFacade) WithField(key string, value interface{}) ILogger {
+	return &loggerFacade{
+		logger: l.logger.WithField(key, value),
 	}
 }
 

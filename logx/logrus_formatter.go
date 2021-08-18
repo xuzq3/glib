@@ -3,10 +3,9 @@ package logx
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
-
 	"github.com/sirupsen/logrus"
 	"github.com/xuzq3/glib/logx/internal"
+	"strings"
 )
 
 type logrusJsonFormatter struct{}
