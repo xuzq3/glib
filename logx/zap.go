@@ -158,6 +158,14 @@ func (l *ZapLogger) WithField(key string, value interface{}) ILogger {
 	}
 }
 
+func (l *ZapLogger) WithKVs(kvs ...interface{}) ILogger {
+	newLogger := l.logger.With(kvs...)
+	return &ZapLogger{
+		opt:    l.opt,
+		logger: newLogger,
+	}
+}
+
 func (l *ZapLogger) WithError(err error) ILogger {
 	newLogger := l.logger.With("error", err.Error())
 	return &ZapLogger{

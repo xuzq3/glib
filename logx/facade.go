@@ -163,6 +163,12 @@ func WithField(key string, value interface{}) ILogger {
 	}
 }
 
+func WithKVs(kvs ...interface{}) ILogger {
+	return &loggerFacade{
+		logger: _facade.logger.WithKVs(kvs...),
+	}
+}
+
 func WithError(err error) ILogger {
 	return &loggerFacade{
 		logger: _facade.logger.WithError(err),
@@ -253,6 +259,12 @@ func (l *loggerFacade) WithFields(fields Fields) ILogger {
 func (l *loggerFacade) WithField(key string, value interface{}) ILogger {
 	return &loggerFacade{
 		logger: l.logger.WithField(key, value),
+	}
+}
+
+func (l *loggerFacade) WithKVs(kvs ...interface{}) ILogger {
+	return &loggerFacade{
+		logger: l.logger.WithKVs(kvs...),
 	}
 }
 

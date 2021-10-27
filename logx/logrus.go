@@ -140,7 +140,7 @@ func (l *LogrusLogger) Panicf(format string, args ...interface{}) {
 func (l *LogrusLogger) WithFields(fields Fields) ILogger {
 	return &logrusLogEntry{
 		logger: l,
-		entry:  l.logger.WithFields(convertToLogrusFields(fields)),
+		entry:  l.logger.WithFields(convertFieldsToLogrus(fields)),
 	}
 }
 
@@ -148,6 +148,13 @@ func (l *LogrusLogger) WithField(key string, value interface{}) ILogger {
 	return &logrusLogEntry{
 		logger: l,
 		entry:  l.logger.WithField(key, value),
+	}
+}
+
+func (l *LogrusLogger) WithKVs(kvs ...interface{}) ILogger {
+	return &logrusLogEntry{
+		logger: l,
+		entry:  l.logger.WithFields(convertKVsToLogrus(kvs...)),
 	}
 }
 
@@ -218,7 +225,7 @@ func (e *logrusLogEntry) Panicf(format string, args ...interface{}) {
 func (e *logrusLogEntry) WithFields(fields Fields) ILogger {
 	return &logrusLogEntry{
 		logger: e.logger,
-		entry:  e.entry.WithFields(convertToLogrusFields(fields)),
+		entry:  e.entry.WithFields(convertFieldsToLogrus(fields)),
 	}
 }
 
@@ -226,6 +233,13 @@ func (e *logrusLogEntry) WithField(key string, value interface{}) ILogger {
 	return &logrusLogEntry{
 		logger: e.logger,
 		entry:  e.entry.WithField(key, value),
+	}
+}
+
+func (e *logrusLogEntry) WithKVs(kvs ...interface{}) ILogger {
+	return &logrusLogEntry{
+		logger: e.logger,
+		entry:  e.entry.WithFields(convertKVsToLogrus(kvs...)),
 	}
 }
 
@@ -240,10 +254,21 @@ func (e *logrusLogEntry) Output() io.Writer {
 	return e.logger.Output()
 }
 
-func convertToLogrusFields(fields Fields) logrus.Fields {
+func convertFieldsToLogrus(fields Fields) logrus.Fields {
 	logrusFields := logrus.Fields{}
-	for index, val := range fields {
-		logrusFields[index] = val
+	for key, val := range fields {
+		logrusFields[key] = val
+	}
+	return logrusFields
+}
+
+func convertKVsToLogrus(kvs ...interface{}) logrus.Fields {
+	logrusFields := logrus.Fields{}
+	for i := 0; i < len(kvs); i += 2 {
+		if i >= len(kvs) {
+			break
+		}
+		logrusFields[fmt.Sprint(kvs[i])] = kvs[i+1]
 	}
 	return logrusFields
 }

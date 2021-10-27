@@ -12,8 +12,6 @@ func TestFacade(t *testing.T) {
 		t.Error(err)
 	}
 	Info("hello")
-	WithFields(Fields{
-		"a": 1,
-		"c": "C",
-	}).Info("info")
+	WithFields(Fields{"a": 1, "c": "C"}).Info("info")
+	WithKVs("a", 1, "b", "b").Info("info")
 }
