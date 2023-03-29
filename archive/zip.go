@@ -6,19 +6,99 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"time"
 )
 
-func CompressZip(ctx context.Context, srcPath string, destPath string) error {
-	srcPath = filepath.Clean(srcPath)
-	dw, err := os.Create(destPath)
+const (
+	ZipStore   = zip.Store
+	ZipDeflate = zip.Deflate
+)
+
+type ZipOption struct {
+	Method uint16
+}
+
+type OptionFunc func(option *ZipOption) *ZipOption
+
+func WithZipMethod(method uint16) OptionFunc {
+	return func(o *ZipOption) *ZipOption {
+		o.Method = method
+		return o
+	}
+}
+
+type ZipWriter struct {
+	dw   *os.File
+	zw   *zip.Writer
+	path string
+	opt  *ZipOption
+}
+
+func NewZipWriter(path string, opts ...OptionFunc) (*ZipWriter, error) {
+	dw, err := os.Create(path)
+	if err != nil {
+		return nil, err
+	}
+	zw := zip.NewWriter(dw)
+
+	opt := &ZipOption{}
+	for _, o := range opts {
+		o(opt)
+	}
+
+	return &ZipWriter{
+		dw:   dw,
+		zw:   zw,
+		path: path,
+		opt:  opt,
+	}, nil
+}
+
+func (c *ZipWriter) Close() {
+	_ = c.zw.Close()
+	_ = c.dw.Close()
+}
+
+func (c *ZipWriter) add(hdr *zip.FileHeader, reader io.Reader) error {
+	w, err := c.zw.CreateHeader(hdr)
 	if err != nil {
 		return err
 	}
-	defer dw.Close()
+	_, err = io.Copy(w, reader)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
-	zw := zip.NewWriter(dw)
-	defer zw.Close()
+func (c *ZipWriter) AddFile(fi os.FileInfo, name string, reader io.Reader) error {
+	hdr, err := zip.FileInfoHeader(fi)
+	if err != nil {
+		return err
+	}
+	hdr.Name = filepath.ToSlash(name)
+	hdr.Method = c.opt.Method
 
+	return c.add(hdr, reader)
+}
+
+func (c *ZipWriter) AddFileOnlyName(name string, reader io.Reader) error {
+	hdr := &zip.FileHeader{
+		Name:     name,
+		Method:   c.opt.Method,
+		Modified: time.Now(),
+	}
+	return c.add(hdr, reader)
+}
+
+func CompressZip(ctx context.Context, srcPath string, destPath string) error {
+	writer, err := NewZipWriter(destPath)
+	if err != nil {
+		return err
+	}
+	defer writer.Close()
+
+	srcPath = filepath.Clean(srcPath)
 	fi, err := os.Stat(srcPath)
 	if err != nil {
 		return err
@@ -26,9 +106,9 @@ func CompressZip(ctx context.Context, srcPath string, destPath string) error {
 
 	_, srcRelative := filepath.Split(srcPath)
 	if fi.IsDir() {
-		err = compressZipDir(ctx, srcPath, srcRelative, zw)
+		err = compressZipDir(ctx, srcPath, srcRelative, writer)
 	} else {
-		err = compressZipFile(ctx, srcPath, srcRelative, zw, fi)
+		err = compressZipFile(ctx, srcPath, srcRelative, writer, fi)
 	}
 	if err != nil {
 		return err
@@ -36,9 +116,8 @@ func CompressZip(ctx context.Context, srcPath string, destPath string) error {
 	return nil
 }
 
-func compressZipDir(ctx context.Context, srcPath string, srcRelative string, zw *zip.Writer) error {
-	err := checkDone(ctx)
-	if err != nil {
+func compressZipDir(ctx context.Context, srcPath string, srcRelative string, zw *ZipWriter) error {
+	if err := checkDone(ctx); err != nil {
 		return err
 	}
 
@@ -47,6 +126,7 @@ func compressZipDir(ctx context.Context, srcPath string, srcRelative string, zw 
 		return err
 	}
 	defer dir.Close()
+
 	fis, err := dir.Readdir(0)
 	if err != nil {
 		return err
@@ -70,33 +150,21 @@ func compressZipDir(ctx context.Context, srcPath string, srcRelative string, zw 
 	return nil
 }
 
-func compressZipFile(ctx context.Context, srcPath string, srcRelative string, zw *zip.Writer, fi os.FileInfo) error {
-	err := checkDone(ctx)
-	if err != nil {
+func compressZipFile(ctx context.Context, srcPath string, srcRelative string, zw *ZipWriter, fi os.FileInfo) error {
+	if err := checkDone(ctx); err != nil {
 		return err
 	}
 
-	hdr, err := zip.FileInfoHeader(fi)
-	if err != nil {
-		return err
-	}
-	hdr.Name = filepath.ToSlash(srcRelative)
-	hdr.Method = zip.Deflate
-	w, err := zw.CreateHeader(hdr)
-	if err != nil {
-		return err
-	}
 	r, err := os.Open(srcPath)
 	if err != nil {
 		return err
 	}
 	defer r.Close()
 
-	_, err = io.Copy(w, r)
+	err = zw.AddFile(fi, srcRelative, r)
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
