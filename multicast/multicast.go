@@ -309,6 +309,7 @@ func (s *Server) handle(n int, src *net.UDPAddr, b []byte) {
 		logx.Error("multicast parse message failed, msg:%s, err:%s", string(msg), err.Error())
 		return
 	}
+	defer s.msgCtxPool.Put(ctx)
 	ctx.Next()
 }
 
