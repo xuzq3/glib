@@ -75,7 +75,7 @@ func (ak *DistributedAccessTokenHandle) GetAccessTokenContext(ctx context.Contex
 			return "", err
 		}
 		defer func() {
-			_ = lock.Unlock(ctx)
+			_ = lock.Unlock()
 		}()
 	}
 
@@ -106,7 +106,7 @@ func (ak *DistributedAccessTokenHandle) RefreshAccessToken() (err error) {
 			return nil
 		}
 		defer func() {
-			_ = lock.Unlock(ctx)
+			_ = lock.Unlock()
 		}()
 	}
 
