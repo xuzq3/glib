@@ -9,20 +9,131 @@ import (
 	"path/filepath"
 )
 
-func CompressTarGzip(ctx context.Context, srcPath string, destPath string) error {
-	srcPath = filepath.Clean(srcPath)
-	fw, err := os.Create(destPath)
+type TarGzipWriter struct {
+	fw   *os.File
+	gw   *gzip.Writer
+	tw   *tar.Writer
+	path string
+}
+
+func NewTarGzipWriter(path string) (*TarGzipWriter, error) {
+	fw, err := os.Create(path)
+	if err != nil {
+		return nil, err
+	}
+	gw := gzip.NewWriter(fw)
+	tw := tar.NewWriter(gw)
+
+	return &TarGzipWriter{
+		fw:   fw,
+		gw:   gw,
+		tw:   tw,
+		path: path,
+	}, nil
+}
+
+func (p *TarGzipWriter) Close() {
+	_ = p.tw.Close()
+	_ = p.gw.Close()
+	_ = p.fw.Close()
+}
+
+func (p *TarGzipWriter) add(ctx context.Context, hdr *tar.Header, reader io.Reader) error {
+	if err := checkDone(ctx); err != nil {
+		return err
+	}
+
+	err := p.tw.WriteHeader(hdr)
 	if err != nil {
 		return err
 	}
-	defer fw.Close()
 
-	gw := gzip.NewWriter(fw)
-	defer gw.Close()
+	_, err = io.Copy(p.tw, reader)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 
-	tw := tar.NewWriter(gw)
-	defer tw.Close()
+func (p *TarGzipWriter) AddFileByReader(ctx context.Context, name string, fi os.FileInfo, reader io.Reader) error {
+	hdr, err := tar.FileInfoHeader(fi, "")
+	if err != nil {
+		return err
+	}
 
+	hdr.Name = filepath.ToSlash(name)
+	return p.add(ctx, hdr, reader)
+}
+
+func (p *TarGzipWriter) AddFile(ctx context.Context, name string, file string) error {
+	fi, err := os.Stat(file)
+	if err != nil {
+		return err
+	}
+
+	r, err := os.Open(file)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = r.Close() }()
+
+	err = p.AddFileByReader(ctx, name, fi, r)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *TarGzipWriter) AddDir(ctx context.Context, name string, dir string) error {
+	if err := checkDone(ctx); err != nil {
+		return err
+	}
+
+	df, err := os.Open(dir)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = df.Close() }()
+
+	fis, err := df.Readdir(0)
+	if err != nil {
+		return err
+	}
+
+	for _, fi := range fis {
+		childPath := filepath.Join(dir, fi.Name())
+		childName := filepath.Join(name, fi.Name())
+		if fi.IsDir() {
+			err = p.AddDir(ctx, childName, childPath)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = p.AddFile(ctx, childName, childPath)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+//func (p *TarGzipWriter) AddFileOnlyName(name string, reader io.Reader) error {
+//	hdr := &tar.Header{
+//		Name:    filepath.ToSlash(name),
+//		ModTime: time.Now(),
+//	}
+//	return p.add(hdr, reader)
+//}
+
+func CompressTarGzip(ctx context.Context, srcPath string, destPath string) error {
+	writer, err := NewTarGzipWriter(destPath)
+	if err != nil {
+		return err
+	}
+	defer writer.Close()
+
+	srcPath = filepath.Clean(srcPath)
 	fi, err := os.Stat(srcPath)
 	if err != nil {
 		return err
@@ -30,77 +141,10 @@ func CompressTarGzip(ctx context.Context, srcPath string, destPath string) error
 
 	_, srcRelative := filepath.Split(srcPath)
 	if fi.IsDir() {
-		err = compressTarGzipDir(ctx, srcPath, srcRelative, tw)
+		err = writer.AddDir(ctx, srcRelative, srcPath)
 	} else {
-		err = compressTarGzipFile(ctx, srcPath, srcRelative, tw, fi)
+		err = writer.AddFile(ctx, srcRelative, srcPath)
 	}
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func compressTarGzipDir(ctx context.Context, srcPath string, srcRelative string, tw *tar.Writer) error {
-	err := checkDone(ctx)
-	if err != nil {
-		return err
-	}
-
-	dir, err := os.Open(srcPath)
-	if err != nil {
-		return err
-	}
-	defer dir.Close()
-
-	fis, err := dir.Readdir(0)
-	if err != nil {
-		return err
-	}
-	for _, fi := range fis {
-		curPath := filepath.Join(srcPath, fi.Name())
-		curRelative := filepath.Join(srcRelative, fi.Name())
-
-		if fi.IsDir() {
-			err = compressTarGzipDir(ctx, curPath, curRelative, tw)
-			if err != nil {
-				return err
-			}
-		} else {
-			err = compressTarGzipFile(ctx, curPath, curRelative, tw, fi)
-			if err != nil {
-				return err
-			}
-		}
-
-	}
-	return nil
-}
-
-func compressTarGzipFile(ctx context.Context, srcPath string, srcRelative string, tw *tar.Writer, fi os.FileInfo) error {
-	err := checkDone(ctx)
-	if err != nil {
-		return err
-	}
-
-	hdr, err := tar.FileInfoHeader(fi, "")
-	if err != nil {
-		return err
-	}
-
-	hdr.Name = filepath.ToSlash(srcRelative)
-	err = tw.WriteHeader(hdr)
-	if err != nil {
-		return err
-	}
-
-	fr, err := os.Open(srcPath)
-	if err != nil {
-		return err
-	}
-	defer fr.Close()
-
-	_, err = io.Copy(tw, fr)
 	if err != nil {
 		return err
 	}
